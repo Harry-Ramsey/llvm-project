@@ -1423,7 +1423,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       else
         setOperationAction(ISD::BSWAP, VT, Expand);
 
-      if (VT == MVT::v8i8 || VT == MVT::v16i8)
+      if (VT == MVT::v8i8 || VT == MVT::v16i8 || VT == MVT::v8i16 ||
+          VT == MVT::v4i16 || VT == MVT::v2i32 || VT == MVT::v4i32)
         setOperationAction(ISD::CTTZ, VT, Custom);
       else
         setOperationAction(ISD::CTTZ, VT, Expand);
@@ -12073,6 +12074,8 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 SDValue AArch64TargetLowering::LowerCTTZ(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   assert(VT.isScalableVector() || VT == MVT::v8i8 || VT == MVT::v16i8 ||
+         VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v2i32 ||
+         VT == MVT::v4i32 ||
          useSVEForFixedLengthVectorVT(
              VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()));
 
