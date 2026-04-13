@@ -29,6 +29,9 @@
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
 #include <optional>
+
+#include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -1074,6 +1077,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         Cost += 10;
       return Cost;
     }
+    break;
+  }
+  case Intrinsic::cttz: {
+    auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+    // llvm::errs() << "LT Value: " << LT.first << "\n";
+    if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
+      return LT.first * 2;
+    if (LT.second == MVT::v4i16 || LT.second == MVT::v8i16 ||
+        LT.second == MVT::v2i32 || LT.second == MVT::v4i32)
+      return LT.first * 3;
     break;
   }
   case Intrinsic::experimental_cttz_elts: {

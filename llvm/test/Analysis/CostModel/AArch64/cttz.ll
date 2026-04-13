@@ -65,7 +65,7 @@ define <2 x i64> @test_cttz_v2i64(<2 x i64> %a) {
 define <2 x i32> @test_cttz_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v2i32'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i32> %cttz
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 true)
@@ -75,7 +75,7 @@ define <2 x i32> @test_cttz_v2i32(<2 x i32> %a) {
 define <4 x i32> @test_cttz_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v4i32'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %cttz
 ;
   %cttz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 true)
@@ -85,7 +85,7 @@ define <4 x i32> @test_cttz_v4i32(<4 x i32> %a) {
 define <2 x i16> @test_cttz_v2i16(<2 x i16> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v2i16'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <2 x i16> @llvm.cttz.v2i16(<2 x i16> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <2 x i16> @llvm.cttz.v2i16(<2 x i16> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i16> %cttz
 ;
   %cttz = call <2 x i16> @llvm.cttz.v2i16(<2 x i16> %a, i1 true)
@@ -95,7 +95,7 @@ define <2 x i16> @test_cttz_v2i16(<2 x i16> %a) {
 define <4 x i16> @test_cttz_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v4i16'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <4 x i16> @llvm.cttz.v4i16(<4 x i16> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <4 x i16> @llvm.cttz.v4i16(<4 x i16> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %cttz
 ;
   %cttz = call <4 x i16> @llvm.cttz.v4i16(<4 x i16> %a, i1 true)
@@ -105,7 +105,7 @@ define <4 x i16> @test_cttz_v4i16(<4 x i16> %a) {
 define <8 x i16> @test_cttz_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v8i16'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %cttz
 ;
   %cttz = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> %a, i1 true)
@@ -115,7 +115,7 @@ define <8 x i16> @test_cttz_v8i16(<8 x i16> %a) {
 define <2 x i8> @test_cttz_v2i8(<2 x i8> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v2i8'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i8> %cttz
 ;
   %cttz = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %a, i1 true)
@@ -125,7 +125,7 @@ define <2 x i8> @test_cttz_v2i8(<2 x i8> %a) {
 define <4 x i8> @test_cttz_v4i8(<4 x i8> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v4i8'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %cttz = call <4 x i8> @llvm.cttz.v4i8(<4 x i8> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %cttz = call <4 x i8> @llvm.cttz.v4i8(<4 x i8> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i8> %cttz
 ;
   %cttz = call <4 x i8> @llvm.cttz.v4i8(<4 x i8> %a, i1 true)
@@ -165,7 +165,7 @@ define <4 x i64> @test_cttz_v4i64(<4 x i64> %a) {
 define <8 x i32> @test_cttz_v8i32(<8 x i32> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v8i32'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %cttz = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %cttz = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %cttz
 ;
   %cttz = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> %a, i1 true)
@@ -175,7 +175,7 @@ define <8 x i32> @test_cttz_v8i32(<8 x i32> %a) {
 define <16 x i16> @test_cttz_v16i16(<16 x i16> %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_v16i16'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %cttz = call <16 x i16> @llvm.cttz.v16i16(<16 x i16> %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %cttz = call <16 x i16> @llvm.cttz.v16i16(<16 x i16> %a, i1 true)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %cttz
 ;
   %cttz = call <16 x i16> @llvm.cttz.v16i16(<16 x i16> %a, i1 true)
