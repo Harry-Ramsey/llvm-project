@@ -27622,6 +27622,41 @@ static SDValue getNarrowMaskForInterleavedOps(SelectionDAG &DAG, SDLoc &DL,
                      WideMask->getOperand(0));
 }
 
+static bool
+deinterleaveInterleavedValueForSVESt3(SDValue WideValue, SDLoc DL,
+                                      SelectionDAG &DAG,
+                                      SmallVectorImpl<SDValue> &Ops) {
+  constexpr unsigned Factor = 3;
+  EVT WideVT = WideValue.getValueType();
+  if (!WideVT.isScalableVector())
+    return false;
+
+  ElementCount WideEC = WideVT.getVectorElementCount();
+  if (!WideEC.isKnownMultipleOf(Factor))
+    return false;
+
+  EVT SubVecTy =
+      EVT::getVectorVT(*DAG.getContext(), WideVT.getVectorElementType(),
+                       WideEC.divideCoefficientBy(Factor));
+  if (!SubVecTy.isScalableVector() ||
+      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
+    return false;
+
+  SmallVector<SDValue, 3> SubVecs;
+  for (unsigned I = 0; I != Factor; ++I)
+    SubVecs.push_back(DAG.getNode(
+        ISD::EXTRACT_SUBVECTOR, DL, SubVecTy, WideValue,
+        DAG.getVectorIdxConstant(I * SubVecTy.getVectorMinNumElements(), DL)));
+
+  SmallVector<EVT, 3> ResultVTs(Factor, SubVecTy);
+  SDValue Deinterleaved = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                                      DAG.getVTList(ResultVTs), SubVecs);
+  for (unsigned I = 0; I != Factor; ++I)
+    Ops.push_back(Deinterleaved.getValue(I));
+  return true;
+}
+
 static SDValue performInterleavedMaskedStoreCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (!DCI.isBeforeLegalize())
@@ -27646,11 +27681,16 @@ static SDValue performInterleavedMaskedStoreCombine(
       return SDValue();
   } else if (!isSplatVectorInterleaveOps(DAG, DL, WideValue,
                                          ValueInterleaveOps)) {
-    return SDValue();
+    // A vector.interleave3 defined in another basic block is unknown here
+    // because SelectionDAGs are local to a basic block. Deinterleave the wide
+    // value back into legal operands so it can be used by st3.
+    if (!deinterleaveInterleavedValueForSVESt3(WideValue, DL, DAG,
+                                               ValueInterleaveOps))
+      return SDValue();
   }
 
   unsigned NumParts = ValueInterleaveOps.size();
-  if (NumParts != 2 && NumParts != 4)
+  if (NumParts != 2 && NumParts != 3 && NumParts != 4)
     return SDValue();
 
   // At the moment we're unlikely to see a fixed-width vector interleave as
@@ -27666,8 +27706,18 @@ static SDValue performInterleavedMaskedStoreCombine(
   if (!NarrowMask)
     return SDValue();
 
-  const Intrinsic::ID IID =
-      NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
+  Intrinsic::ID IID;
+  switch (NumParts) {
+  case 2:
+    IID = Intrinsic::aarch64_sve_st2;
+    break;
+  case 3:
+    IID = Intrinsic::aarch64_sve_st3;
+    break;
+  case 4:
+    IID = Intrinsic::aarch64_sve_st4;
+    break;
+  }
   SmallVector<SDValue, 8> NewStOps;
   NewStOps.append({MST->getChain(), DAG.getConstant(IID, DL, MVT::i32)});
   NewStOps.append(ValueInterleaveOps);
@@ -30555,7 +30605,7 @@ static SDValue performVectorDeinterleaveCombine(
     return SDValue();
 
   unsigned NumParts = N->getNumOperands();
-  if (NumParts != 2 && NumParts != 4)
+  if (NumParts != 2 && NumParts != 3 && NumParts != 4)
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
@@ -30601,19 +30651,37 @@ static SDValue performVectorDeinterleaveCombine(
   if (!NarrowMask)
     return SDValue();
 
-  const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
-                                          : Intrinsic::aarch64_sve_ld4_sret;
+  Intrinsic::ID IID;
+  switch (NumParts) {
+  case 2:
+    IID = Intrinsic::aarch64_sve_ld2_sret;
+    break;
+  case 3:
+    IID = Intrinsic::aarch64_sve_ld3_sret;
+    break;
+  case 4:
+    IID = Intrinsic::aarch64_sve_ld4_sret;
+    break;
+  }
   SDValue NewLdOps[] = {MaskedLoad->getChain(),
                         DAG.getConstant(IID, DL, MVT::i32), NarrowMask,
                         MaskedLoad->getBasePtr()};
   SDValue Res;
-  if (NumParts == 2)
+  switch (NumParts) {
+  case 2:
     Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
                       {SubVecTy, SubVecTy, MVT::Other}, NewLdOps);
-  else
+    break;
+  case 3:
+    Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
+                      {SubVecTy, SubVecTy, SubVecTy, MVT::Other}, NewLdOps);
+    break;
+  case 4:
     Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
                       {SubVecTy, SubVecTy, SubVecTy, SubVecTy, MVT::Other},
                       NewLdOps);
+    break;
+  }
 
   // We can now generate a structured load!
   SmallVector<SDValue, 4> ResOps(NumParts);
