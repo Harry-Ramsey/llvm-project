@@ -509,6 +509,9 @@ def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
+def SDT_AArch64Addhn : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                            SDTCisSameAs<1, 2>,
+                                            SDTCisOpSmallerThanOp<0, 1>]>;
 def SDT_AArch64MOVIedit : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def SDT_AArch64MOVIshift : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDT_AArch64vecimm : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
@@ -742,7 +745,7 @@ def top32Zero: PatLeaf<(i64 GPR64:$src), [{
   return Op.getValueType() == MVT::i64 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 32));
   }]> {
-  let GISelLeafPredicateCode = [{ 
+  let GISelLeafPredicateCode = [{
     return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 32)); }];
 }
 
@@ -751,14 +754,14 @@ def topbitsallzero32: PatLeaf<(i32 GPR32:$src), [{
   return Op.getValueType() == MVT::i32 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]> {
-  let GISelLeafPredicateCode = [{ 
+  let GISelLeafPredicateCode = [{
     return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 31)); }];
 }
 def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
   return Op.getValueType() == MVT::i64 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 63));
   }]> {
-  let GISelLeafPredicateCode = [{ 
+  let GISelLeafPredicateCode = [{
     return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 63)); }];
 }
 
@@ -911,6 +914,8 @@ def AArch64uzp1      : SDNode<"AArch64ISD::UZP1", SDT_AArch64Zip>;
 def AArch64uzp2      : SDNode<"AArch64ISD::UZP2", SDT_AArch64Zip>;
 def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
+
+def AArch64addhn     : SDNode<"AArch64ISD::ADDHN", SDT_AArch64Addhn>;
 
 // Vector immediate moves
 def AArch64movi_edit : SDNode<"AArch64ISD::MOVIedit", SDT_AArch64MOVIedit>;
@@ -1721,7 +1726,7 @@ let Predicates = [HasNEON, HasDotProd] in {
   def : Pat<(v2i32 (partial_reduce_umla (v2i32 V64:$Acc), (v8i8 V64:$MulLHS), (v8i8 V64:$MulRHS))),
             (v2i32 (UDOTv8i8 V64:$Acc, V64:$MulLHS, V64:$MulRHS))>;
   def : Pat<(v2i32 (partial_reduce_smla (v2i32 V64:$Acc), (v8i8 V64:$MulLHS), (v8i8 V64:$MulRHS))),
-            (v2i32 (SDOTv8i8 V64:$Acc, V64:$MulLHS, V64:$MulRHS))>; 
+            (v2i32 (SDOTv8i8 V64:$Acc, V64:$MulLHS, V64:$MulRHS))>;
 } // End HasNEON, HasDotProd
 
 // ARMv8.6-A BFloat
@@ -3314,7 +3319,7 @@ defm ORR  : LogicalReg<0b01, 0, "orr", or>;
 def : InstAlias<"mov $dst, $src",
                 (ORRWrs GPR32:$dst, WZR,
                         (logical_shifted_reg32 GPR32:$src, 0)), 2>;
-def : InstAlias<"mov $dst, $src", 
+def : InstAlias<"mov $dst, $src",
                 (ORRXrs GPR64:$dst, XZR,
                         (logical_shifted_reg64 GPR64:$src, 0)), 2>;
 
@@ -4937,7 +4942,7 @@ def : Pat<(truncstorei32 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed32 GPR64
 
 // truncstorei16 of f64 bitcasted to i64
 def : Pat<(truncstorei16 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
-          (STRHui (f16 (EXTRACT_SUBREG FPR64:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$offset)>;      
+          (STRHui (f16 (EXTRACT_SUBREG FPR64:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$offset)>;
 
   // truncstorei16 of f32 bitcasted to i32
 def : Pat<(truncstorei16 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$off)),
@@ -6792,27 +6797,27 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
   def : Pat<(i64 (round f32:$Rn)), (!cast<Instruction>(INST # DSr) $Rn)>;
   def : Pat<(i32 (round f64:$Rn)), (!cast<Instruction>(INST # SDr) $Rn)>;
   }
- 
+
   let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(i32 (round f32:$Rn)), (!cast<Instruction>(INST # v1i32) $Rn)>;
   def : Pat<(i64 (round f64:$Rn)), (!cast<Instruction>(INST # v1i64) $Rn)>;
   }
 
   let Predicates = [HasFPRCVT] in {
-  def : Pat<(f32 (bitconvert (i32 (round f16:$Rn)))), 
+  def : Pat<(f32 (bitconvert (i32 (round f16:$Rn)))),
             (!cast<Instruction>(INST # SHr) $Rn)>;
-  def : Pat<(f64 (bitconvert (i64 (round f16:$Rn)))), 
+  def : Pat<(f64 (bitconvert (i64 (round f16:$Rn)))),
             (!cast<Instruction>(INST # DHr) $Rn)>;
-  def : Pat<(f64 (bitconvert (i64 (round f32:$Rn)))), 
+  def : Pat<(f64 (bitconvert (i64 (round f32:$Rn)))),
             (!cast<Instruction>(INST # DSr) $Rn)>;
-  def : Pat<(f32 (bitconvert (i32 (round f64:$Rn)))), 
+  def : Pat<(f32 (bitconvert (i32 (round f64:$Rn)))),
             (!cast<Instruction>(INST # SDr) $Rn)>;
   }
 
   let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
-  def : Pat<(f32 (bitconvert (i32 (round f32:$Rn)))), 
+  def : Pat<(f32 (bitconvert (i32 (round f32:$Rn)))),
             (!cast<Instruction>(INST # v1i32) $Rn)>;
-  def : Pat<(f64 (bitconvert (i64 (round f64:$Rn)))), 
+  def : Pat<(f64 (bitconvert (i64 (round f64:$Rn)))),
             (!cast<Instruction>(INST # v1i64) $Rn)>;
   }
 
@@ -7548,6 +7553,20 @@ defm : AddSubHNPatterns<ADDHNv2i64_v2i32, ADDHNv2i64_v4i32,
                         SUBHNv2i64_v2i32, SUBHNv2i64_v4i32,
                         v2i32, v2i64, 32>;
 
+multiclass AddHNPat<ValueType SrcVT, ValueType DstVT,
+                    Instruction Inst> {
+  def : Pat<
+    (DstVT (AArch64addhn
+      (SrcVT V128:$Rn),
+      (SrcVT V128:$Rm))),
+    (Inst V128:$Rn, V128:$Rm)
+  >;
+}
+
+defm : AddHNPat<v8i16, v8i8,  ADDHNv8i16_v8i8>;
+defm : AddHNPat<v4i32, v4i16, ADDHNv4i32_v4i16>;
+defm : AddHNPat<v2i64, v2i32, ADDHNv2i64_v2i32>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
 //----------------------------------------------------------------------------
@@ -8239,7 +8258,7 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
-                                    SDPatternOperator ScalToVec, Instruction INS, 
+                                    SDPatternOperator ScalToVec, Instruction INS,
                                     Instruction DUP, SubRegIndex DUPSub,
                                     SDNodeXForm VecIndexMult> {
   // VT64->OutVT
@@ -9999,7 +10018,7 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
 let Predicates = [HasNEON] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
-                          SDPatternOperator ExtLoad, SDPatternOperator VecInsNode, 
+                          SDPatternOperator ExtLoad, SDPatternOperator VecInsNode,
                           Instruction LD1>
     : Pat<(ResultTy (VecInsNode (i32 (ExtLoad GPR64sp:$Rn)))),
             (ResultTy (EXTRACT_SUBREG
